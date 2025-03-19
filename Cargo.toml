@@ -1,0 +1,28 @@
+[package]
+name = "interview"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+debug = 1
+
+[features]
+default = []
+multi_threaded = []
+
+[dependencies]
+axum = { version = "*", features = ["http2", "tokio"] }
+tokio = { version = "*", features = ["full"] }
+papaya = "*"
+hyper = { version = "1.0", features = ["server", "http2", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto"] }
+tower-http = { version = "0.5", features = ["set-header"] }
+tower = { version = "0.4", features = ["limit"] }
+tokio-stream = "*"
+libc = "0.2"
+socket2 = "0.5"
+axum-server = "0.5"
+num_cpus = "1.16.0"
+clap = { version = "4.4", features = ["derive"] }
+ahash = "0.8"
+dashmap = { version = "5.5", features = ["rayon"] }
