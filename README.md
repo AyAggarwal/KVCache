@@ -4,9 +4,13 @@ This project implements a high-performance HTTP server with an in-memory key-val
 
 ## Background
 
+This is a low latency cache which has been built for high load and optimized for concurrent access. See the performance data for nuance around low throughput usage, where Http/1.1 is more performant.
+
 - **Lock-Free Data Structures**: Utilizes the `papaya` crate's lock-free `HashMap` to enable concurrent access without traditional locking mechanisms.
 - **Multithreading**: Employs a custom Tokio runtime with multiple worker threads to handle high load efficiently.
 - **HTTP/2 Streaming Optimizations**: Leverages Axum's support for HTTP/2 to improve throughput and reduce latency under concurrent requests.
+
+Note: this has been optimized for a 4 Core  r5.xlarge instance on AWS. Future work  involes dynamically tuning async runtime to a learned function of cores available.
 
 The server supports basic CRUD operations:
 - `GET /` - Returns a "Hello, World!" message.
