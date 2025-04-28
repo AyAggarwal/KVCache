@@ -4,6 +4,7 @@ use std::time::Duration;
 use mio::{Events, Interest, Poll, Token};
 use mio::net::TcpListener;
 use std::net::SocketAddr;
+use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::net::Connection;
 
@@ -48,51 +49,44 @@ impl Server {
                                 poll.registry().register(
                                     &mut connection,
                                     token,
-                                    Interest::READABLE | Interest::WRITABLE,
+                                    Interest::READABLE
                                 )?;
 
                                 let conn = Connection::new(connection);
 
                                 connections.insert(token, conn); 
-                                break;
                             },
-                            Err(ref err) if would_block(err) => {
-                                println!("Would block error: {}", err);
-                                break;
-                            },
+                            Err(ref err) if would_block(err) => break,
                             Err(err) => {
-                                eprintln!("Error accepting connection: {}", err);
                                 return Err(err);
                             },
                         }
                     },
                     token => {
-                        loop {
-                            match connections.get_mut(&token) {
-                                Some(conn) => {
-                                    match conn.stream.read(&mut conn.buffer) {
-                                        Ok(0) => {
-                                            connections.remove(&token);
-                                            break;
-                                        }
-                                        Ok(bytes_read) => {
-                                            println!("Received {} bytes", bytes_read);
-                                             
-                                            conn.stream.write_all(&conn.buffer)?; // echo back   
-        
-                                            break;
-                                        }
-                                        Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                                            break;
-                                        }
-                                        e => panic!("err={:?}", e),
+                        let mut should_remove = false;
+                        match connections.get_mut(&token) {
+                            Some(conn) => {
+                                match conn.read_and_parse() {
+                                    Ok(Some(commands)) => {
+                                        println!("Received {} commands: {:?}", commands.len(), commands);
+                                        // TODO: Handle commands
+                                    },
+                                    Ok(None) => {},
+                                    Err(e) => {
+                                        should_remove = true;
+                                        println!("Connection closed: {:?}", e);
                                     }
-                                },
-                                None => {
-                                    println!("Unexpected error getting connection");
-                                    break
-                                },
-                            }                     
+                                }
+                            },
+                            None => {
+                                println!("Unexpected error getting connection");
+                                should_remove = true;
+                            },
+                        }     
+                        if should_remove {
+                            if let Some(mut conn) = connections.remove(&token) {
+                                poll.registry().deregister(&mut conn.stream)?;
+                            }
                         }
                     }
                 }
